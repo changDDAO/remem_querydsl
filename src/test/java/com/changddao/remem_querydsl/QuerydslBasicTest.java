@@ -4,6 +4,7 @@ import com.changddao.remem_querydsl.entity.Member;
 import com.changddao.remem_querydsl.entity.QMember;
 import com.changddao.remem_querydsl.entity.Team;
 import com.querydsl.core.QueryResults;
+import com.querydsl.core.Tuple;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
@@ -133,5 +134,72 @@ public class QuerydslBasicTest {
         //when
     //then
 //        return new PageImpl<>(result,pageRequest,result.size());
+    }
+    @Test
+    @DisplayName("정렬 테스트")
+    void sort(){
+    //given
+        em.persist(Member.builder().username(null).age(100).build());
+        em.persist(Member.builder().username("member5").age(100).build());
+        em.persist(Member.builder().username("member6").age(100).build());
+    //when
+        List<Member> result = queryFactory.selectFrom(member)
+                .where(member.age.eq(100))
+                .orderBy(member.age.desc(), member.username.asc().nullsLast())
+                .fetch();
+        //then
+        assertThat(result).isNotNull();
+        assertThat(result.get(result.size()-1).getUsername()).isNull();
+    }
+
+    @Test
+    @DisplayName("페이징 테스트")
+    void paging1(){
+    //given
+        List<Member> result = queryFactory.selectFrom(member)
+                .orderBy(member.username.desc())
+                .offset(1)
+                .limit(2)
+                .fetch();
+    //when
+        int size = result.size();
+    //then
+        assertThat(size).isEqualTo(2);
+    }
+    @Test
+    @DisplayName("패이징테스트2")
+    void paging2(){
+    //given
+        em.persist(Member.builder().username(null).age(100).build());
+        em.persist(Member.builder().username("member5").age(100).build());
+        em.persist(Member.builder().username("member6").age(100).build());
+        QueryResults<Member> results = queryFactory.selectFrom(member)
+                .where(member.age.eq(100))
+                .offset(1)
+                .limit(2)
+                .fetchResults();
+
+        //when
+        long total = results.getTotal();
+        assertThat(total).isEqualTo(3L);
+        //then
+    }
+
+    @Test
+    @DisplayName("집합함수")
+    void aggregation(){
+    //given
+        List<Tuple> result = queryFactory.select(member.age.max(), member.age.avg(), member.age.sum(), member.age.min())
+                .from(member)
+                .fetch();
+        //when
+        Tuple tuple = result.get(0);
+        /*10,20,30,40*/
+        assertThat(tuple.get(member.age.max())).isEqualTo(40);
+        assertThat(tuple.get(member.age.avg())).isEqualTo(25);
+        assertThat(tuple.get(member.age.sum())).isEqualTo(100);
+        assertThat(tuple.get(member.age.min())).isEqualTo(10);
+        //then
+
     }
 }
