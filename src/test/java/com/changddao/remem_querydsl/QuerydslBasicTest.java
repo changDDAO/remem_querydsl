@@ -2,6 +2,7 @@ package com.changddao.remem_querydsl;
 
 import com.changddao.remem_querydsl.entity.Member;
 import com.changddao.remem_querydsl.entity.QMember;
+import com.changddao.remem_querydsl.entity.QTeam;
 import com.changddao.remem_querydsl.entity.Team;
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.Tuple;
@@ -24,6 +25,7 @@ import java.awt.print.Pageable;
 import java.util.List;
 
 import static com.changddao.remem_querydsl.entity.QMember.member;
+import static com.changddao.remem_querydsl.entity.QTeam.*;
 import static org.assertj.core.api.Assertions.*;
 
 @SpringBootTest
@@ -53,26 +55,27 @@ public class QuerydslBasicTest {
         em.persist(member4);
 
     }
+
     @Test
     @DisplayName("JPQL")
-    void startJPQL(){
-    //given
+    void startJPQL() {
+        //given
         /*Member 1을 찾아라.*/
         Member findMember = em.createQuery("select m from Member m where m.username= :username", Member.class)
                 .setParameter("username", "member1").getSingleResult();
-    //when
+        //when
         assertThat(findMember).isNotNull();
         assertThat(findMember.getAge()).isEqualTo(10);
 
-    //then
+        //then
     }
 
     @Test
     @DisplayName("Querydsl Test")
-    void querydslTest(){
-    //given
+    void querydslTest() {
+        //given
 
-    //when
+        //when
         Member findMember = queryFactory.select(member).from(member)
                 .where(member.username.eq("member1")).fetchOne();
         //then
@@ -82,26 +85,26 @@ public class QuerydslBasicTest {
 
     @Test
     @DisplayName("QueryDsl_검색")
-    void search(){
-    //given
+    void search() {
+        //given
         Member findMember = queryFactory.selectFrom(member)
                 .where(member.username.eq("member1").and(member.age.eq(10))).fetchOne();
-    //when
+        //when
         assertThat(findMember).isNotNull();
         assertThat(findMember.getAge()).isEqualTo(10);
         assertThat(findMember.getUsername()).isEqualTo("member1");
-    //then
+        //then
     }
 
     @Test
     @DisplayName("querydsl을 이용한 다양한 조회방법")
-    void resultFetch(){
-    //given
+    void resultFetch() {
+        //given
         /*List로 조회*/
         List<Member> result1 = queryFactory.selectFrom(member).fetch();
         /*단건 조회
-        * but, 단건이 아니기 때문에 Exception 발생!!
-        * */
+         * but, 단건이 아니기 때문에 Exception 발생!!
+         * */
 //        Member result2 = queryFactory.selectFrom(member).fetchOne();
 
         /*조회 결과에 따른 첫번째 member 조회*/
@@ -109,11 +112,12 @@ public class QuerydslBasicTest {
 
 
         //when
-    //then
+        //then
     }
+
     @Test
     @DisplayName("페이징_쿼리")
-    void pagingQuery(){
+    void pagingQuery() {
         /*페이징 쿼리*/
         /*queryDsl의 fetchResult의 경우 count를 하기위해선 count용 쿼리를 만들어서 실행해야 하는데, 카운트를 하려는 select 쿼리를 기반으로 count 쿼리를 만들어 실행한다.
         위의 전문을 보면 이런 식인 것 같다.
@@ -128,48 +132,50 @@ public class QuerydslBasicTest {
         그렇기 때문에 카운트하려면 그냥 fetch() 를 쓰고 따로 자바쪽에서 count를 세서 사용하라는 것 같다.
         -> fetchResults() 및 fetchCount()가 deprecated 된 이유.
         */
-    //given
+        //given
         List<Member> result = queryFactory.selectFrom(member).where(member.age.gt(10)).fetch();
         PageRequest pageRequest = PageRequest.of(1, 10, Sort.by("age"));
         //when
-    //then
+        //then
 //        return new PageImpl<>(result,pageRequest,result.size());
     }
+
     @Test
     @DisplayName("정렬 테스트")
-    void sort(){
-    //given
+    void sort() {
+        //given
         em.persist(Member.builder().username(null).age(100).build());
         em.persist(Member.builder().username("member5").age(100).build());
         em.persist(Member.builder().username("member6").age(100).build());
-    //when
+        //when
         List<Member> result = queryFactory.selectFrom(member)
                 .where(member.age.eq(100))
                 .orderBy(member.age.desc(), member.username.asc().nullsLast())
                 .fetch();
         //then
         assertThat(result).isNotNull();
-        assertThat(result.get(result.size()-1).getUsername()).isNull();
+        assertThat(result.get(result.size() - 1).getUsername()).isNull();
     }
 
     @Test
     @DisplayName("페이징 테스트")
-    void paging1(){
-    //given
+    void paging1() {
+        //given
         List<Member> result = queryFactory.selectFrom(member)
                 .orderBy(member.username.desc())
                 .offset(1)
                 .limit(2)
                 .fetch();
-    //when
+        //when
         int size = result.size();
-    //then
+        //then
         assertThat(size).isEqualTo(2);
     }
+
     @Test
     @DisplayName("패이징테스트2")
-    void paging2(){
-    //given
+    void paging2() {
+        //given
         em.persist(Member.builder().username(null).age(100).build());
         em.persist(Member.builder().username("member5").age(100).build());
         em.persist(Member.builder().username("member6").age(100).build());
@@ -187,8 +193,8 @@ public class QuerydslBasicTest {
 
     @Test
     @DisplayName("집합함수")
-    void aggregation(){
-    //given
+    void aggregation() {
+        //given
         List<Tuple> result = queryFactory.select(member.age.max(), member.age.avg(), member.age.sum(), member.age.min())
                 .from(member)
                 .fetch();
@@ -201,5 +207,104 @@ public class QuerydslBasicTest {
         assertThat(tuple.get(member.age.min())).isEqualTo(10);
         //then
 
+    }
+
+    /* 팀의 이름과 각 팀의 평균연령을 구해라.
+     * */
+    @Test
+    @DisplayName("group함수 사용")
+    void group() {
+        //given
+        List<Tuple> result = queryFactory
+                .select(team.name, member.age.avg())
+                .from(member)
+                .join(member.team, team)
+                .groupBy(team.name)
+                .fetch();
+        //when
+        Tuple teamA = result.get(0);
+        Tuple teamB = result.get(1);
+        assertThat(teamA.get(member.age.avg())).isNotNull();
+        assertThat(teamA.get(member.age.avg())).isEqualTo(15);
+        assertThat(teamB.get(member.age.avg())).isNotNull();
+        assertThat(teamB.get(member.age.avg())).isEqualTo(35);
+
+        //then
+    }
+
+    /*팀A에 소속된 모든 회원
+     * */
+    @Test
+    @DisplayName("조인_테스트")
+    void join() {
+        //given
+        List<Member> result = queryFactory.selectFrom(member)
+                .join(member.team, team)
+                .where(team.name.eq("teamA"))
+                .fetch();
+        //when
+        assertThat(result).extracting("username")
+                .containsExactly("member1", "member2");
+        //then
+    }
+
+    /*
+    세타조인(회원의 이름이 팀이름과 같은 회원 조회)
+    * */
+    @Test
+    @DisplayName("연관관계가 없는 조인 테스트")
+    void thetaJoin() {
+        //given
+        em.persist(Member.builder().username("teamA").build());
+        em.persist(Member.builder().username("teamB").build());
+        //when
+        List<Member> result = queryFactory.select(member)
+                .from(member, team)
+                .where(member.username.eq(team.name))
+                .fetch();
+        //then
+        assertThat(result).extracting("username")
+                .containsExactly("teamA", "teamB");
+    }
+
+    /*
+     * 예) 회원과 팀을 조인하면서, 팀 이름이 teamA인 팀만 조인, 회원은 모두 조회
+     * */
+    @Test
+    @DisplayName("join on에서 필터링 테스트")
+    void joinFiltering() {
+        //given
+        List<Tuple> result = queryFactory.select(member, team)
+                .from(member)
+                .leftJoin(member.team, team).on(team.name.eq("teamA"))
+                .fetch();
+        //when
+        assertThat(result.size()).isEqualTo(4);
+        for (Tuple tuple : result) {
+            System.out.println("tuple = " + tuple);
+        }
+        //then
+    }
+
+    /*
+    연관관계가 없는 엔티티 외부 조인
+    회원의 이름이 팀 이름과 같은 대상 외부조인
+    * */
+    @Test
+    @DisplayName("연관관계가 없는 조인 테스트")
+    void join_on_no_relation() {
+        //given
+        em.persist(Member.builder().username("teamA").build());
+        em.persist(Member.builder().username("teamB").build());
+        //when
+        List<Tuple> result = queryFactory.select(member, team)
+                .from(member)
+                .leftJoin(team).on(member.username.eq(team.name))
+                .fetch();
+
+        //then
+        for (Tuple tuple : result) {
+            System.out.println("tuple = " + tuple);
+        }
     }
 }
