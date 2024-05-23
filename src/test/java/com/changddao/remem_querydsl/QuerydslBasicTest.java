@@ -445,6 +445,20 @@ public class QuerydslBasicTest {
         }
     //then
     }
+
+    @Test
+    @DisplayName("문자_더하기")
+    void concat(){
+    //given
+        List<String> result = queryFactory.select(member.username.concat("_").concat(member.age.stringValue()))
+                .from(member)
+                .fetch();
+        //when
+        for (String s : result) {
+            System.out.println("s = " + s);
+        }
+    //then
+    }
 }
 
 
