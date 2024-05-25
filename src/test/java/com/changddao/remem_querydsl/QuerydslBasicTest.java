@@ -1,11 +1,15 @@
 package com.changddao.remem_querydsl;
 
+import com.changddao.remem_querydsl.dto.MemberDto;
+import com.changddao.remem_querydsl.dto.UserDto;
 import com.changddao.remem_querydsl.entity.Member;
 import com.changddao.remem_querydsl.entity.QMember;
 import com.changddao.remem_querydsl.entity.QTeam;
 import com.changddao.remem_querydsl.entity.Team;
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.Tuple;
+import com.querydsl.core.types.ExpressionUtils;
+import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -396,8 +400,8 @@ public class QuerydslBasicTest {
 
     @Test
     @DisplayName("where절 서브쿼리 테스트")
-    void whereSubQuery(){
-    //given
+    void whereSubQuery() {
+        //given
         QMember memberSub = new QMember("memberSub");
 
         List<Tuple> result = queryFactory.select(member.username,
@@ -409,13 +413,13 @@ public class QuerydslBasicTest {
         for (Tuple tuple : result) {
             System.out.println("tuple = " + tuple);
         }
-    //then
+        //then
     }
 
     @Test
     @DisplayName("case절 테스트")
-    void basicCase(){
-    //given
+    void basicCase() {
+        //given
         List<String> results = queryFactory.select(member.age
                         .when(10).then("열살")
                         .when(20).then("스무살")
@@ -426,12 +430,13 @@ public class QuerydslBasicTest {
         for (String result : results) {
             System.out.println("result = " + result);
         }
-    //then
+        //then
     }
+
     @Test
     @DisplayName("복잡할때 case절 test")
-    void complexCase(){
-    //given
+    void complexCase() {
+        //given
         List<String> result = queryFactory.select(new CaseBuilder()
                         .when(member.age.between(0, 20)).then("0~20살")
                         .when(member.age.between(21, 30)).then("21~30살")
@@ -443,13 +448,13 @@ public class QuerydslBasicTest {
         for (String s : result) {
             System.out.println("s = " + s);
         }
-    //then
+        //then
     }
 
     @Test
     @DisplayName("문자_더하기")
-    void concat(){
-    //given
+    void concat() {
+        //given
         List<String> result = queryFactory.select(member.username.concat("_").concat(member.age.stringValue()))
                 .from(member)
                 .fetch();
@@ -457,13 +462,13 @@ public class QuerydslBasicTest {
         for (String s : result) {
             System.out.println("s = " + s);
         }
-    //then
+        //then
     }
 
     @Test
     @DisplayName("튜플_프로젝션")
-    void tupleProjection(){
-    //given
+    void tupleProjection() {
+        //given
         List<Tuple> result = queryFactory
                 .select(member.username, member.age)
                 .from(member)
@@ -475,8 +480,107 @@ public class QuerydslBasicTest {
             System.out.println("username = " + username);
             System.out.println("age = " + age);
         }
+        //then
+    }
+
+    @Test
+    @DisplayName("JPQL을 이용하여 DTO 조회")
+    void findDtoByJPQL() {
+        //given
+        List<MemberDto> result = em.createQuery("select new com.changddao.remem_querydsl.dto.MemberDto(m.username, m.age)  from Member m", MemberDto.class)
+                .getResultList();
+        //when
+        for (MemberDto memberDto : result) {
+            System.out.println("memberDto = " + memberDto);
+        }
+        //then
+    }
+
+    @Test
+    @DisplayName("Projection을 이용한 Dto 조회")
+    void findDtoBySetter() {
+        //given
+        List<MemberDto> result = queryFactory.select(Projections.bean(MemberDto.class,
+                        member.username,
+                        member.age)
+                ).from(member)
+                .fetch();
+        //when
+        for (MemberDto memberDto : result) {
+            System.out.println("memberDto = " + memberDto);
+        }
+        //then
+    }
+
+    @Test
+    @DisplayName("Projection을 이용한 Dto 조회2")
+    void findDtoByField() {
+        //given
+        List<MemberDto> result = queryFactory.select(Projections.fields(MemberDto.class,
+                        member.username,
+                        member.age)
+                ).from(member)
+                .fetch();
+        //when
+        for (MemberDto memberDto : result) {
+            System.out.println("memberDto = " + memberDto);
+        }
+        //then
+    }
+
+    @Test
+    @DisplayName("Projection을 이용한 Dto 조회3")
+    void findDtoByConstructor() {
+        //given
+        List<MemberDto> result = queryFactory.select(Projections.constructor(MemberDto.class,
+                        member.username,
+                        member.age)
+                ).from(member)
+                .fetch();
+        //when
+        for (MemberDto memberDto : result) {
+            System.out.println("memberDto = " + memberDto);
+        }
+    }
+    /*필드로 조회할때 발생할 수 있는 필드명이 다른 것을 alias를 사용하여 매칭 시키는 방법*/
+    @Test
+    @DisplayName("alias 사용하기")
+    void findUserDto(){
+    //given
+        QMember memberSub = new QMember("memberSub");
+        List<UserDto> result = queryFactory.select(Projections.fields(UserDto.class,
+                        ExpressionUtils.as(member.username, "name"),
+                        ExpressionUtils.as(JPAExpressions
+                                .select(memberSub.age.max())
+                                .from(memberSub), "age")
+                ))
+                .from(member)
+                .fetch();
+        //when
+        for (UserDto userDto : result) {
+            System.out.println("userDto = " + userDto);
+        }
     //then
     }
+
+    @Test
+    @DisplayName("Constructor을 이용한 dto조회")
+    void findByConstructor() {
+        //given
+        List<UserDto> result = queryFactory.select(Projections.constructor(UserDto.class
+                        , member.username
+                        , member.age))
+                .from(member)
+                .fetch();
+
+        //when
+        for(UserDto userDto : result) {
+            System.out.println("userDto = " + userDto);
+        }
+        //then
+    }
 }
+
+
 
 
