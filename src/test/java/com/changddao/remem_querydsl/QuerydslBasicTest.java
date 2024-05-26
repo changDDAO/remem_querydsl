@@ -7,6 +7,7 @@ import com.changddao.remem_querydsl.entity.Member;
 import com.changddao.remem_querydsl.entity.QMember;
 import com.changddao.remem_querydsl.entity.QTeam;
 import com.changddao.remem_querydsl.entity.Team;
+import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.ExpressionUtils;
@@ -594,6 +595,30 @@ public class QuerydslBasicTest {
 
         }
     //then
+    }
+    @Test
+    @DisplayName("QueryDsl 동적쿼리")
+    void dynamicQuery_BooleanBuilder(){
+    //given
+        String username = "member1";
+        Integer age = null;
+        //when
+        List<Member> result = getMemberSearch(username, age);
+        //then
+        assertThat(result.size()).isEqualTo(1);
+    }
+
+    private List<Member> getMemberSearch(String usernameCond, Integer ageCond) {
+        BooleanBuilder builder = new BooleanBuilder();
+        if(usernameCond != null) {
+            builder.and(member.username.eq(usernameCond));
+        }
+        if(ageCond != null) {
+            builder.and(member.age.eq(ageCond));
+        }
+        return queryFactory.select(member)
+                .from(member)
+                .where(builder).fetch();
     }
 }
 
