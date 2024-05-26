@@ -28,6 +28,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.test.annotation.Commit;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.awt.print.Pageable;
@@ -675,6 +676,65 @@ public class QuerydslBasicTest {
 
     private BooleanExpression allEq(String usernameCond, Integer ageCond) {
         return usernameEq(usernameCond).and(ageEq(ageCond));
+    }
+
+    @Test
+    @DisplayName("벌크 업데이트")
+    @Commit
+    void bulkUpdate(){
+    //given
+        /*(영속성 컨텍스트)member1=10 -> 1 (DB) member1*/
+        /*(영속성 컨텍스트)member2=20 -> 2 (DB) member2*/
+        /*(영속성 컨텍스트)member3=30 -> 3 (DB) member3*/
+        /*(영속성 컨텍스트)member4=40 -> 4 (DB) member4*/
+        long count = queryFactory
+                .update(member)
+                .set(member.username, "비회원")
+                .where(member.age.lt(28))
+                .execute();
+        /*(영속성 컨텍스트)member1=10 -> 1 (DB) 비회원*/
+        /*(영속성 컨텍스트)member2=20 -> 2 (DB) 비회원*/
+        /*(영속성 컨텍스트)member3=30 -> 3 (DB) member3*/
+        /*(영속성 컨텍스트)member4=40 -> 4 (DB) member4*/
+        //when
+        assertThat(count).isEqualTo(2);
+        List<Member> result = queryFactory.select(member)
+                .from(member)
+                .fetch();
+        //then
+        /*DB에 바로 업데이트 쿼리를 날리기 때문에 영속성 컨텍스트에 담겨있는 member Entity는 값변경이
+        이뤄지지 않는다.
+        그러므로 벌크업데이트 후에는 필히 영속성컨텍스트를 DB와 동기화하고 비워줄 필요가 있다.
+        em.flush();
+        em.clear();
+        * */
+        for (Member member1 : result) {
+            System.out.println("member1 = " + member1);
+        }
+
+    }
+    @Test
+    @DisplayName("벌크 업데이트")
+//    .multiply() 곱하기 , divide() 나누기
+    void bulkAdd(){
+    //given
+        long count = queryFactory.update(member)
+                .set(member.age, member.age.add(1))
+                .execute();
+        //when
+        assertThat(count).isEqualTo(4);
+    //then
+    }
+    @Test
+    @DisplayName("벌크 삭제")
+    void bulkDelete(){
+        //given
+        long count = queryFactory.update(member)
+                .set(member.age, member.age.add(1))
+                .execute();
+        //when
+        assertThat(count).isEqualTo(4);
+        //then
     }
 }
 
