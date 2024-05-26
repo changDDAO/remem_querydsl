@@ -1,6 +1,7 @@
 package com.changddao.remem_querydsl;
 
 import com.changddao.remem_querydsl.dto.MemberDto;
+import com.changddao.remem_querydsl.dto.QMemberDto;
 import com.changddao.remem_querydsl.dto.UserDto;
 import com.changddao.remem_querydsl.entity.Member;
 import com.changddao.remem_querydsl.entity.QMember;
@@ -578,6 +579,21 @@ public class QuerydslBasicTest {
             System.out.println("userDto = " + userDto);
         }
         //then
+    }
+
+    @Test
+    @DisplayName("쿼리 프로젝션")
+    void queryProjection(){
+    //given
+        List<MemberDto> result = queryFactory.select(new QMemberDto(member.username, member.age))
+                .from(member)
+                .fetch();
+        //when
+        for (MemberDto memberDto : result) {
+            System.out.println("memberDto = " + memberDto);
+
+        }
+    //then
     }
 }
 
