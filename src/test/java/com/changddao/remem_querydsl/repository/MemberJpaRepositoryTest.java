@@ -104,6 +104,33 @@ class MemberJpaRepositoryTest {
         assertThat(result.get(0).getUsername()).isEqualTo("member4");
     }
 
+    @Test
+    @DisplayName("메소드를 생성하여 동적쿼리 작성")
+    void search_dynamic_test(){
+    //given
+        Team teamA = Team.builder().name("teamA").build();
+        Team teamB = Team.builder().name("teamB").build();
+        em.persist(teamA);
+        em.persist(teamB);
+
+        Member member1 = Member.builder().username("member1").age(10).team(teamA).build();
+        Member member2 = Member.builder().username("member2").team(teamA).age(20).build();
+        Member member3 = Member.builder().username("member3").age(30).team(teamB).build();
+        Member member4 = Member.builder().username("member4").age(40).team(teamB).build();
+
+        em.persist(member1);
+        em.persist(member2);
+        em.persist(member3);
+        em.persist(member4);
+        MemberSearchCondtion condtion = MemberSearchCondtion.builder().ageGoe(10).ageLoe(20).build();
+        List<MemberTeamDto> result = memberJpaRepository.searchByMethod(condtion);
+        //when
+        assertThat(result).hasSize(2);
+        assertThat(result).extracting("age").containsExactly(10,20);
+        assertThat(result).extracting("username").containsExactly("member1", "member2");
+    //then
+    }
+
 
 
 
