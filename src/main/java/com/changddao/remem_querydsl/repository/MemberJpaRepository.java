@@ -1,18 +1,25 @@
 package com.changddao.remem_querydsl.repository;
 
+import com.changddao.remem_querydsl.dto.MemberSearchCondtion;
+import com.changddao.remem_querydsl.dto.MemberTeamDto;
+import com.changddao.remem_querydsl.dto.QMemberTeamDto;
 import com.changddao.remem_querydsl.entity.Member;
 import com.changddao.remem_querydsl.entity.QMember;
+import com.querydsl.core.BooleanBuilder;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
+import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.Optional;
 
 import static com.changddao.remem_querydsl.entity.QMember.*;
+import static com.changddao.remem_querydsl.entity.QTeam.team;
+import static org.springframework.util.StringUtils.*;
 
 @Repository
 @RequiredArgsConstructor
@@ -29,21 +36,25 @@ public class MemberJpaRepository {
         Member findMember = em.find(Member.class, id);
         return Optional.ofNullable(findMember);
     }
-/*JPA를 이용한 findAll*/
+
+    /*JPA를 이용한 findAll*/
     public List<Member> findAll() {
         return em.createQuery("select m from Member m", Member.class).getResultList();
     }
+
     /*querydsl을 이용한 findAll*/
-    public List<Member> findAll_Querydsl(){
+    public List<Member> findAll_Querydsl() {
         return queryFactory.selectFrom(member).fetch();
     }
-/*JPA를 이용하여 username을 갖는 멤버 리스트 가지고 오기*/
+
+    /*JPA를 이용하여 username을 갖는 멤버 리스트 가지고 오기*/
     public List<Member> findByUsername(String username) {
         List<Member> result = em.createQuery("select m from Member" +
                         " m where m.username = :username", Member.class).setParameter("username", username)
                 .getResultList();
         return result;
     }
+
     /*Querydsl 이용하여 username을 갖는 멤버 리스트 가지고 오기*/
     public List<Member> findByUsername_Querydsl(String username) {
         List<Member> result = queryFactory.selectFrom(member)
@@ -51,4 +62,34 @@ public class MemberJpaRepository {
                 .fetch();
         return result;
     }
+
+    public List<MemberTeamDto> searchByBuilder(MemberSearchCondtion cond) {
+        //given
+        BooleanBuilder builder = new BooleanBuilder();
+        if (hasText(cond.getUsername())) {
+            builder.and(member.username.eq(cond.getUsername()));
+        }
+        if (hasText(cond.getTeamName())) {
+            builder.and(team.name.eq(cond.getTeamName()));
+        }
+        if (cond.getAgeLoe() != null) {
+            builder.and(member.age.loe(cond.getAgeLoe()));
+        }
+        if (cond.getAgeGoe() != null) {
+            builder.and(member.age.goe(cond.getAgeGoe()));
+        }
+        return queryFactory.select(new QMemberTeamDto(
+                        member.id.as("memberId"),
+                        member.username,
+                        member.age,
+                        team.id.as("teamId"),
+                        team.name.as("teamName")
+                )).from(member)
+                .leftJoin(member.team, team)
+                .where(builder)
+                .fetch();
+        //when
+        //then
+    }
+
 }

@@ -1,6 +1,12 @@
 package com.changddao.remem_querydsl.repository;
 
+import com.changddao.remem_querydsl.dto.MemberSearchCondtion;
+import com.changddao.remem_querydsl.dto.MemberTeamDto;
+import com.changddao.remem_querydsl.dto.QMemberTeamDto;
 import com.changddao.remem_querydsl.entity.Member;
+import com.changddao.remem_querydsl.entity.QMember;
+import com.changddao.remem_querydsl.entity.QTeam;
+import com.changddao.remem_querydsl.entity.Team;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import org.assertj.core.api.Assertions;
@@ -12,6 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+import static com.changddao.remem_querydsl.entity.QMember.*;
+import static com.changddao.remem_querydsl.entity.QTeam.*;
 import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.*;
 @SpringBootTest
@@ -59,4 +67,44 @@ class MemberJpaRepositoryTest {
         assertThat(results.get(0)).isEqualTo(member);
         assertThat(results).containsExactly(member);
     }
+
+    @Test
+    @DisplayName("동적쿼리 테스트")
+    void searchTest(){
+    //given
+        Team teamA = Team.builder().name("teamA").build();
+        Team teamB = Team.builder().name("teamB").build();
+        em.persist(teamA);
+        em.persist(teamB);
+
+        Member member1 = Member.builder().username("member1").age(10).team(teamA).build();
+        Member member2 = Member.builder().username("member2").team(teamA).age(20).build();
+        Member member3 = Member.builder().username("member3").age(30).team(teamB).build();
+        Member member4 = Member.builder().username("member4").age(40).team(teamB).build();
+
+        em.persist(member1);
+        em.persist(member2);
+        em.persist(member3);
+        em.persist(member4);
+
+
+    //when
+        List<MemberTeamDto> memberTeamDtos =
+                memberJpaRepository.searchByBuilder(MemberSearchCondtion.builder().ageGoe(13).build());
+        //then
+        assertThat(memberTeamDtos).hasSize(3);
+        assertThat(memberTeamDtos).extracting("age").containsExactly(20, 30, 40);
+
+        List<MemberTeamDto> result = memberJpaRepository
+                .searchByBuilder(MemberSearchCondtion.builder().ageGoe(35).ageLoe(40).teamName("teamB").build());
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getTeamName()).isEqualTo("teamB");
+        assertThat(result.get(0).getAge()).isEqualTo(40);
+        assertThat(result.get(0).getUsername()).isEqualTo("member4");
+    }
+
+
+
+
 }
