@@ -3,6 +3,7 @@ package com.changddao.remem_querydsl.repository;
 import com.changddao.remem_querydsl.dto.MemberSearchCondtion;
 import com.changddao.remem_querydsl.dto.MemberTeamDto;
 import com.changddao.remem_querydsl.entity.Member;
+import com.changddao.remem_querydsl.entity.QMember;
 import com.changddao.remem_querydsl.entity.Team;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -89,6 +90,35 @@ class MemberRepositoryTest {
         assertThat(result).extracting("age").containsExactly(10,20,30);
         assertThat(result).extracting("username").containsExactly("member1", "member2","member3");
         //then
+    }
+
+    @Test
+    @DisplayName("querydsl PredicateExecutor테스트")
+    void querydslPredicateExecutor_test(){
+    //given
+        Team teamA = Team.builder().name("teamA").build();
+        Team teamB = Team.builder().name("teamB").build();
+        em.persist(teamA);
+        em.persist(teamB);
+
+        Member member1 = Member.builder().username("member1").age(10).team(teamA).build();
+        Member member2 = Member.builder().username("member2").team(teamA).age(20).build();
+        Member member3 = Member.builder().username("member3").age(30).team(teamB).build();
+        Member member4 = Member.builder().username("member4").age(40).team(teamB).build();
+
+        em.persist(member1);
+        em.persist(member2);
+        em.persist(member3);
+        em.persist(member4);
+        QMember member = QMember.member;
+        Iterable<Member> result = memberRepository.findAll(member.age.between(10, 40)
+                .and(member.username.eq("member1")));
+        //when
+        for (Member el : result) {
+            System.out.println("member1 = " + el);
+        }
+
+    //then
     }
 
 
